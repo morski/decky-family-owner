@@ -3,7 +3,17 @@
 ## Status and assumptions
 This document turns the supplied conversation into executable tasks. It is not a fresh verification of upstream documentation. Version numbers from the conversation are intentionally not pinned as current facts. Steam UI internals, selected-license ownership, persona access and loopback avatar routes require on-device discovery.
 
-## MVP
+## Scope revision — 2026-10-03
+
+User now requests all owner avatars, including current-user + family copies, default lower-left. This supersedes selected-copy-only/own-hidden acceptance below. Historical evidence/tasks remain recorded, but UI acceptance is reopened for the new owner-list semantics. Gate A2 passed on the observed build: native GetAvailableLenders returns the current user for known own-only games, three owners including the current user for 431240, both lenders for 424840, and one lender for both borrowed fixtures. It reports available owners/copies, not every Steam friend globally. No ownership is inferred from missing owner_account_id. Gate B target remains unchanged and passed.
+
+Revised UI acceptance: display every validated reported owner, deduplicate IDs, include current user, stack avatars vertically upward from bottom-left (user revision), default bottom-left; unknown/non-Steam entries hide. Use bounded asynchronous owner-list requests outside render, account generations, cleanup and persona dedup. Old selected-only UI results do not count as new multi-owner acceptance.
+
+## CS2 and offset revision — 2026-10-03
+
+User reports CS2 missing and requests badges closer to lower-left edges. Current inset is 2px. Device-confirmed native AppDetails proves current user's subscribed permanent license for CS2 even though GetAvailableLenders is empty. A successful empty list may therefore fall back to an exact current-user permanent license match; malformed/failed native lists and unknown/borrowed/expired/pending license proof still fail closed. No other people's ownership is inferred. Only requested CS2 free-game inspection supersedes the earlier waiver; other waived fixture requests remain skipped.
+
+## MVP (original scope; superseded above)
 In Gaming Mode Library, overlay the selected lender's avatar on borrowed Steam games. Games owned by the active account get no badge. Unknown ownership gets no badge. Unresolved lender avatars use a generic icon. No license switching, multi-owner stack, API key, credential handling or plugin-operated external service.
 
 ## Suggested source structure
@@ -11,10 +21,11 @@ In Gaming Mode Library, overlay the selected lender's avatar on borrowed Steam g
 src/
   index.tsx
   logging.ts
-  components/OwnerBadge.tsx
+  components/OwnersBadge.tsx
+  components/Avatar.tsx
   components/BadgeErrorBoundary.tsx
   patches/libraryCapsulePatch.tsx
-  services/ownershipService.ts
+  services/ownersService.ts
   services/personaService.ts
   steam/appStore.ts
   steam/currentUser.ts
@@ -87,7 +98,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 05. Inspect ownership data
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** For known own, single-lender and multi-owner games inspect window.appStore.GetAppOverviewByAppID(APP_ID). Log only appid, display_name, owner_account_id and app_type. Do not enumerate or serialize entire store objects. Use docs/research/ownership-data.md.
 
@@ -95,15 +106,17 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 06. Prove ownership semantics — gate A
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Test own-only, own+family, single lender, two lenders, ineligible game, free-to-play and non-Steam shortcut. For multi-owner games compare against Steam copy selection; when authorized, observe changes after selecting a different copy. Determine whether owner_account_id means selected lender, preferred lender, historical owner or something else. Missing/zero must remain own-or-unknown rather than proof of ownership.
 
 **Exit condition:** A reliable borrowed-owner mapping is proven. If not, stop dependent UI integration and document alternatives; do not invent semantics.
 
+**Evidence scope (2026-10-03):** Passed for observed Steam build 1788652215 using the user-reported copy switch, direct native lender-list comparison and direct persona/hash correlation. User explicitly skipped ineligible/free/non-Steam device fixtures; these remain SKIPPED, not PASS. Full release acceptance is incomplete.
+
 ### 07. Implement Steam ID helpers
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Use BigInt base 76561197960265728n for individual public-universe SteamID64 conversion. Validate AccountID as an integer in 0..4294967295; validate reverse conversions remain in that range. Keep SteamID64 a decimal string. Test zero, maximum, real-looking ID, round trip and malformed inputs.
 
@@ -111,7 +124,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 08. Discover current account
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Implement src/steam/currentUser.ts behind a narrow adapter. Find the actual Steam global/API on-device rather than guessing names. Return {accountId, steamId64} or undefined. Handle unavailable account and login change. Log IDs only in opt-in diagnostics; never secrets.
 
@@ -119,7 +132,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 09. Implement ownership service
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Read only validated fields from appStore via an injected adapter. Return a discriminated own/borrowed/unknown result with appId and ownerAccountId when meaningful. Unknown active identity, missing app, malformed owner and non-Steam entries produce unknown. Use plugin-owned Maps and bounded/invalidatable caching. Do not mutate overview objects.
 
@@ -127,7 +140,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 10. Discover personas and avatars
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Probe already-loaded Steam persona/profile data first, then Steam-exposed local avatar URLs. Treat https://steamloopback.host/avatarcache/<SteamID64>.png as a hypothesis, not an established route. Verify scheme, path, image load and offline behavior. File-cache access is a backend fallback, not automatically available to frontend JavaScript. Record findings.
 
@@ -135,7 +148,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 11. Implement persona service
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Return {accountId, steamId64, name?, avatarUrl?}. Deduplicate in-flight requests with a pending Map; cache settled results with documented TTL and retry policy. Resolve failures to safe fallback data. Invalidate per active account; prevent old promises repopulating new caches with generation checks or cancellation. Validate URL sources based on observed Steam behavior.
 
@@ -143,7 +156,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 12. Create badge and error boundary
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Implement OwnerBadge with default 28px circle, 2px border and 6px bottom-right inset. object-fit:cover, pointer-events:none; no tabIndex or controller focus. Use a silhouette/name initial on image failure and reset image-error state when URL changes. Give accessible Shared by <name> information without duplicate focus targets. Isolate all plugin content behind an error boundary returning null.
 
@@ -151,7 +164,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 13. Discover library capsule — gate B
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Use CEF and current Decky webpack utilities. Study maintained library patches such as TabMaster. Identify structurally, validate candidate uniqueness and app-ID props, and document the existing positioned container. No fixed module IDs/minified names/fiber indices. Verify Stable and Beta separately when available.
 
@@ -159,7 +172,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 14. Implement capsule patch
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Keep patch logic in src/patches/libraryCapsulePatch.tsx. Inject into an existing container if possible; avoid wrappers changing grid/focus layout. Preserve original props and children. Guard missing APIs/components and catch discovery/install failures. installLibraryCapsulePatch and removeLibraryCapsulePatch must be idempotent.
 
@@ -167,7 +180,7 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ### 15. Implement complete teardown
 
-- [ ] Complete task.
+- [x] Complete task.
 
 **Instructions:** Store every unpatch/unregister handle. A shared active-state subscription must hide already-mounted badges on unload, because unpatching alone may not rerender existing capsules. Unregister callbacks, clear timers/maps, cancel or invalidate pending requests and remove injected styles.
 
@@ -267,3 +280,13 @@ Execute the numbered tasks in order; do independent local work when a device tas
 
 ## Logging
 Use `[FamilyOwner]` prefix. Routine logs: initialized, patch installed, unsupported runtime, teardown. IDs, per-app ownership and persona details belong in opt-in debug mode. Never dump stores, cookies, tokens or authenticated responses. Rate-limit repeated warnings.
+
+## Local install artifact acceptance — 2026-10-03
+
+User approves current appearance and explicitly requests cleanup and a local Decky ZIP. This authorizes a private tested install artifact while broader runtime/release checks stay untested; it does not authorize publication.
+
+- [x] Remove running temporary frontend and verify zero residual owner groups.
+- [x] Remove obsolete selected-owner implementation and template deployment scaffolding.
+- [x] Document current architecture, code, UI design, development and native installation.
+- [x] Run final typecheck/tests/build and verify local ZIP contents.
+- [ ] Fresh persistent Decky installation and removal on device (not a local packaging claim).

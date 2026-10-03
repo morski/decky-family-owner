@@ -1,23 +1,30 @@
-# Release checklist
+# Build and release checklist
 
-## Local v0.1.0 artifact
-- [ ] All implementation-plan acceptance criteria pass.
-- [ ] Ownership and capsule discovery gates passed with evidence.
-- [ ] Typecheck, unit tests and production build pass.
-- [ ] Device matrix and exact versions recorded.
-- [ ] Stable and Beta results honest and complete.
-- [ ] Current frontend-only Decky packaging requirements verified.
-- [ ] README, privacy statement, license and metadata complete.
-- [ ] Real screenshots captured with unnecessary personal data removed.
-- [ ] No credentials/debug dumps/node_modules in archive.
-- [ ] ZIP has correct loader-required root layout.
-- [ ] Fresh install, reload, disable and uninstall tested.
-- [ ] FamilyOwner-v0.1.0.zip and release notes prepared.
+## User-authorized local install artifact
 
-## Publishing (separate authorization)
-- [ ] User instructed GitHub release publication.
-- [ ] Direct ZIP tested by several real Families/Deck configurations.
+- [x] Ownership and capsule discovery gates passed on observed build; skipped fixtures recorded.
+- [x] User approves upward lower-left appearance and requests local ZIP.
+- [x] Temporary frontend stopped; read-only inspection confirms no development instance or owner groups.
+- [x] Obsolete selected-owner implementation and template deployment/backend scaffolding removed.
+- [x] Architecture, code map, design, development, installation and build notes updated.
+- [x] Strict typecheck, 80 tests/14 files and production build pass.
+- [x] Exact observed device versions and remaining untested scope recorded.
+- [x] Native ZIP root/allowlist/CRC/contents/SHA-256 verified; actual loader extraction method tested locally.
+- [x] No credentials, research/debug dumps, inspector, tests or node_modules in archive.
+- [x] FamilyOwner-v0.1.0.zip and checksum prepared; upstream BSD notice retained, project UNLICENSED.
+
+## Remaining device/release acceptance
+
+- [ ] Fresh persistent install, QAM panel, reload and native uninstall verified.
+- [ ] Full physical-controller acceptance, real account/family transitions and offline behavior verified.
+- [ ] Stable/Beta coverage; current channel confirmed.
+- [ ] Project author/license finalized for public distribution.
+- [ ] Several real Families/Deck configurations test direct ZIP.
+
+## Publishing — separate user instruction
+
+- [ ] User instructs GitHub release publication.
 - [ ] Current Decky database contribution process verified.
-- [ ] User instructed store PR submission.
+- [ ] User instructs store PR submission.
 
-Suggested progression: 0.1 direct tested release; 0.2 broader feedback; 0.3 compatibility hardening; 1.0 store submission. These are milestones, not automatic publishing instructions.
+A private local artifact is available. It is not a claim that all public-release or device acceptance gates passed.

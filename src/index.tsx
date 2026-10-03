@@ -1,115 +1,57 @@
-import {
-  ButtonItem,
-  PanelSection,
-  PanelSectionRow,
-  Navigation,
-  staticClasses
-} from "@decky/ui";
-import {
-  addEventListener,
-  removeEventListener,
-  callable,
-  definePlugin,
-  toaster,
-  // routerHook
-} from "@decky/api"
-import { useState } from "react";
-import { FaShip } from "react-icons/fa";
-
-// import logo from "../assets/logo.png";
-
-// This function calls the python function "add", which takes in two numbers and returns their sum (as a number)
-// Note the type annotations:
-//  the first one: [first: number, second: number] is for the arguments
-//  the second one: number is for the return value
-const add = callable<[first: number, second: number], number>("add");
-
-// This function calls the python function "start_timer", which takes in no arguments and returns nothing.
-// It starts a (python) timer which eventually emits the event 'timer_event'
-const startTimer = callable<[], void>("start_timer");
-
-function Content() {
-  const [result, setResult] = useState<number | undefined>();
-
-  const onClick = async () => {
-    const result = await add(Math.random(), Math.random());
-    setResult(result);
-  };
-
-  return (
-    <PanelSection title="Panel Section">
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={onClick}
-        >
-          {result ?? "Add two numbers via Python"}
-        </ButtonItem>
-      </PanelSectionRow>
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => startTimer()}
-        >
-          {"Start Python timer"}
-        </ButtonItem>
-      </PanelSectionRow>
-
-      {/* <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <img src={logo} />
-        </div>
-      </PanelSectionRow> */}
-
-      {/*<PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => {
-            Navigation.Navigate("/decky-plugin-test");
-            Navigation.CloseSideMenus();
-          }}
-        >
-          Router
-        </ButtonItem>
-      </PanelSectionRow>*/}
-    </PanelSection>
-  );
-};
-
+import { definePlugin } from "@decky/api";
+import { staticClasses, findAllModules, afterPatch } from "@decky/ui";
+import { FaUsers } from "react-icons/fa";
+import { BadgeErrorBoundary } from "./components/BadgeErrorBoundary";
+import { Lifecycle } from "./services/lifecycle";
+import { SettingsStore } from "./settings/settings";
+import { SettingsPanel } from "./settings/SettingsPanel";
+import { OwnersService } from "./services/ownersService";
+import { createOwnersAdapter, type OwnersSteamClient } from "./steam/owners";
+import { PersonaService } from "./services/personaService";
+import { CurrentUserService, createWebChatCurrentUserAdapter, subscribeLoginChanges, type IdentitySteamClient } from "./steam/currentUser";
+import { type SteamOverviewReader } from "./steam/appStore";
+import { createCachedPersonaAdapter, discoverPersonaCache } from "./steam/personas";
+import { discoverLibraryCapsule } from "./steam/libraryCapsule";
+import { LibraryCapsulePatch } from "./patches/libraryCapsulePatch";
+import { VisibleApps } from "./services/visibleApps";
+declare const SteamClient: (IdentitySteamClient & OwnersSteamClient) | undefined;
 export default definePlugin(() => {
-  console.log("Template plugin initializing, this is called once on frontend startup")
-
-  // serverApi.routerHook.addRoute("/decky-plugin-test", DeckyPluginRouterTest, {
-  //   exact: true,
-  // });
-
-  // Add an event listener to the "timer_event" event from the backend
-  const listener = addEventListener<[
-    test1: string,
-    test2: boolean,
-    test3: number
-  ]>("timer_event", (test1, test2, test3) => {
-    console.log("Template got timer_event with:", test1, test2, test3)
-    toaster.toast({
-      title: "template got timer_event",
-      body: `${test1}, ${test2}, ${test3}`
-    });
-  });
-
+  const lifecycle = new Lifecycle();
+  let storage: Storage | undefined;
+  try { storage = window.localStorage; } catch { /* session-only fallback */ }
+  const settings = new SettingsStore(storage);
+  const getClient = () => typeof SteamClient !== "undefined" ? SteamClient : (window as Window & { SteamClient?: IdentitySteamClient & OwnersSteamClient }).SteamClient;
+  const identity = new CurrentUserService(createWebChatCurrentUserAdapter(getClient));
+  const ownership = new OwnersService(createOwnersAdapter(() =>
+    (window as Window & { appStore?: SteamOverviewReader }).appStore, getClient));
+  const personas = new PersonaService(createCachedPersonaAdapter(discoverPersonaCache(findAllModules),
+    () => identity.getSnapshot()?.accountId));
+  lifecycle.addCleanup(() => settings.dispose());
+  lifecycle.addCleanup(() => ownership.dispose());
+  lifecycle.addCleanup(() => personas.dispose());
+  lifecycle.addCleanup(identity.subscribe(() => {
+    const user = identity.getSnapshot();
+    personas.setCurrentAccount(user?.accountId);
+    ownership.setCurrentUser(user);
+  }));
+  lifecycle.addCleanup(() => identity.dispose());
+  const loginCleanup = subscribeLoginChanges(getClient(), () => { void identity.refresh(); });
+  if (loginCleanup) lifecycle.addCleanup(loginCleanup);
+  const visible = new VisibleApps(() => { ownership.refresh(); });
+  lifecycle.addCleanup(() => visible.dispose());
+  const capsule = discoverLibraryCapsule(findAllModules);
+  const patch = new LibraryCapsulePatch(afterPatch, { lifecycle, settings, ownership, personas, visible });
+  lifecycle.addCleanup(() => patch.removeLibraryCapsulePatch());
+  // Fail closed if safe login teardown or unique capsule discovery is unavailable.
+  const installed = !!loginCleanup && !!capsule && patch.installLibraryCapsulePatch(capsule.target, capsule.boxClass);
+  void identity.refresh();
+  console.info(installed ? "[FamilyOwner] patch installed" : "[FamilyOwner] unsupported runtime");
   return {
-    // The name shown in various decky menus
-    name: "Test Plugin",
-    // The element displayed at the top of your plugin's menu
-    titleView: <div className={staticClasses.Title}>Decky Example Plugin</div>,
-    // The content of your plugin's menu
-    content: <Content />,
-    // The icon displayed in the plugin list
-    icon: <FaShip />,
-    // The function triggered when your plugin unloads
-    onDismount() {
-      console.log("Unloading")
-      removeEventListener("timer_event", listener);
-      // serverApi.routerHook.removeRoute("/decky-plugin-test");
-    },
+    name: "Family Owner",
+    titleView: <div className={staticClasses.Title}>Family Owner</div>,
+    content: <BadgeErrorBoundary><SettingsPanel store={settings}
+      refresh={() => { personas.invalidate(); ownership.refresh(); void identity.refresh(); }} /></BadgeErrorBoundary>,
+    icon: <FaUsers />,
+    onDismount() { lifecycle.dispose(); console.info("[FamilyOwner] teardown"); },
   };
 });

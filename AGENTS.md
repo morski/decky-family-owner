@@ -1,7 +1,7 @@
 # Agent instructions — Family Owner
 
 ## Goal
-Show a small avatar on Steam Gaming Mode library capsules for games borrowed through Steam Families. Display the owner of the selected copy only when this can be established reliably. Current-user games and unknown/non-Steam entries stay unchanged.
+Show avatars on Steam Gaming Mode library capsules for every owner reliably reported by Steam Families, including the current user when they own a copy. Show all reported owners, defaulting to the lower-left corner. Unknown/non-Steam entries stay unchanged. This scope supersedes the original selected-lender-only requirement (user instruction, 2026-10-03).
 
 ## Read order
 1. `docs/implementation-plan.md`

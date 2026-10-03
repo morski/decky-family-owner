@@ -1,11 +1,13 @@
 {
-  "name": "Example Plugin",
-  "author": "John Doe",
-  "flags": ["debug", "_root"],
+  "name": "Family Owner",
+  "author": "Family Owner contributors",
+  "flags": [],
   "api_version": 1,
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Decky example plugin.",
-    "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
+    "tags": [
+      "library",
+      "steam-families"
+    ],
+    "description": "Shows all verified Steam Families owners as an upward avatar stack on Library capsules."
   }
 }

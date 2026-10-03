@@ -1,19 +1,25 @@
 # Family Owner
 
-Family Owner is a frontend-only Decky plugin under development for the Steam Deck Gaming Mode Library and Steam Families. The intended MVP adds a small avatar for the **selected copy's lender**, only when that owner can be established reliably. Games owned by the active user, unknown ownership and non-Steam entries stay unchanged. It does not switch licenses or show multiple owners.
+A frontend-only Decky plugin that shows verified Steam Families owners on Gaming Mode Library capsules. Includes your avatar when you own a copy and every owner reported by Steam's available-lender list. Avatars grow upward from the lower-left corner; missing ownership hides the badge.
 
-The planned badge defaults to a 28px circle in the bottom-right corner, with a generic fallback when the lender's avatar cannot load. Settings will offer enable/disable, three sizes, four corners and safe refresh. Badges must not change controller focus, pointer handling or library layout, and unload must hide mounted badges immediately.
+## Install
 
-## Current status
+Build locally with `pnpm install --frozen-lockfile` and `pnpm package`, or use the generated `out/FamilyOwner-v0.1.0.zip`. Copy the ZIP to your Deck. In Decky settings, enable Developer Mode if needed, open Developer, and choose **Install Plugin from ZIP File**. Select the ZIP and confirm installation. Open Family Owner in Decky's plugin drawer to enable badges, change size/corner, or refresh ownership.
 
-Local scaffold and isolated components are being developed. Steam ownership semantics, active-account APIs, persona sources and capsule discovery are **unverified**. The development panel deliberately performs no library integration. No device compatibility, selected-lender behavior or installable release is claimed. See [progress](docs/progress.md) and [device evidence instructions](docs/device-testing.md).
+See [installation and verification](docs/installation.md). The local ZIP is verified structurally; a fresh persistent installation has not yet been tested. The approved temporary frontend was removed from the Deck.
 
-## Requirements and privacy
+## How it works
 
-The release target requires Steam Deck Gaming Mode, Decky Loader and Steam Families. Active-account detection and a proven selected-copy mapping are prerequisites. Runtime data will be read through narrow frontend adapters. No Steam API keys, tokens, cookies, credential collection, plugin-operated service or Steam-file changes are involved. Diagnostic IDs are opt-in only. Steam's own verified avatar source may be used once discovered.
+Ownership comes from native Steam Families APIs. A successful empty lender list can use exact proof of your permanent subscribed license, including Counter-Strike 2. Names and avatar hashes come from Steam's existing persona caches; images use Steam's avatar CDN. No API keys, credentials, backend, license switching, or Steam store mutations.
 
-## Development
+Unknown owners stay hidden. Known owners with missing images get initials or a silhouette. Badges cannot receive focus or pointer/gamepad input. Settings persist in plugin browser storage. Account changes invalidate asynchronous work; unload hides badges and removes patches, subscriptions and timers.
 
-The official template requires Node.js 16.14+ and pnpm 9. This project is tested locally with Node 22.14.0 and pnpm 9.15.9. Run `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm test` and `pnpm build`.
+- [Architecture and code map](docs/architecture.md)
+- [UI and ownership design](docs/design.md)
+- [Development and packaging](docs/development.md)
+- [Installation](docs/installation.md)
+- [Build notes and tested scope](docs/release-notes.md)
 
-Distribution is blocked on real-device acceptance and a project license chosen with the user. The upstream template's BSD notice is retained in LICENSE; it does not settle the license for new project code. No release ZIP or screenshots are provided until the discovery and acceptance gates pass. Future tested packages can be installed using Decky's developer ZIP installer and removed using Decky's plugin management; exact device steps remain untested.
+Actual device discovery and temporary runtime checks used SteamOS 3.8.16, Steam client 1788652215, and Decky 3.2.9. Steam internals can change; discovery requires unique structural matches and fails closed. Channel, fresh installation, real account transitions and offline behavior remain unverified.
+
+Project code is currently UNLICENSED pending a public license decision. [LICENSE](LICENSE) preserves the official template's BSD notice. No public release or store submission has been made.
